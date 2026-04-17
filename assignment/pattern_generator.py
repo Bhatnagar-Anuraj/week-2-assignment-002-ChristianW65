@@ -43,7 +43,7 @@ import maya.cmds as cmds
 cmds.file(new=True, force=True)
 
 def generate_pattern():
-    """Generate a 5x5 grid of rectangular prisms, with red ones on the diagonal."""
+    """Generate a 5x5 grid of mixed objects, with red spheres on the diagonal."""
 
     # --- Configuration variables ---
     num_rows = 5        # Number of rows in the grid
@@ -58,26 +58,35 @@ def generate_pattern():
             x_pos = col * spacing
             z_pos = row * spacing
 
-            # --- Create a rectangular prism (polyCube with custom size) ---
-            # polyCube returns a list; index [0] is the shape's name
-            cube = cmds.polyCube(width=1.5, height=2.5, depth=1.0)[0]
+            # --- Conditional: create different shapes based on position ---
+            # If on the diagonal (row equals col), create a sphere
+            if row == col:
+                obj = cmds.polySphere(radius=1.0)[0]
 
-            # Move the cube to its grid position
-            cmds.move(x_pos, 0, z_pos, cube)
+            # If on the first row, create a cylinder
+            elif row == 0:
+                obj = cmds.polyCylinder(radius=0.75, height=2.0)[0]
 
-            # --- Conditional: make diagonal prisms red ---
-            # The diagonal is where the row index equals the column index
+            # Everything else gets a rectangular prism
+            else:
+                obj = cmds.polyCube(width=1.5, height=2.5, depth=1.0)[0]
+
+            # Move the object to its grid position
+            cmds.move(x_pos, 0, z_pos, obj)
+
+            # --- Color: make diagonal spheres red ---
+            # Only the diagonal objects (spheres) get the red material
             if row == col:
                 # Create a new red Lambert material
                 red_material = cmds.shadingNode('lambert', asShader=True)
                 cmds.setAttr(red_material + '.color', 1, 0, 0, type='double3')
 
-                # Connect the material to a shading group, then assign it
+                # Connect the material to a shading group, then assign it to the object
                 shading_group = cmds.sets(renderable=True, noSurfaceShader=True,
                                           empty=True)
                 cmds.connectAttr(red_material + '.outColor',
                                  shading_group + '.surfaceShader', force=True)
-                cmds.sets(cube, edit=True, forceElement=shading_group)
+                cmds.sets(obj, edit=True, forceElement=shading_group)
 
 # ---------------------------------------------------------------------------
 # Run the generator
